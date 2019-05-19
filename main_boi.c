@@ -171,6 +171,25 @@ void *pusher_soda(void * arg){
     return 0 ;
 }
 
+void * customer_soda(void * arg){
+    
+    while(1){
+        
+        pthread_mutex_lock(&customer);
+        while(customer_soda_job == 0)
+            pthread_cond_wait(&customer_soda_c, &customer);
+        have_fries = 0;
+        have_hamburger = 0;
+        customer_soda_job = 0;
+        chef_job = 1;
+        puts("Soda customer takes fries and hamburger then eats");
+        pthread_mutex_unlock(&customer);
+        
+        puts("Soda customer rings bell");
+    }
+    
+    return 0;
+}
 void *customer_hamburger(void *arg) {
 
 	while (1) {
