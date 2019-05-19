@@ -207,21 +207,6 @@ void * customer_fries(void * arg) {
 	return 0;
 }
 
-void * customer_hamburger(void * arg) {
-
-	while (1) {
-		pthread_mutex_lock(&customer);
-		while (customer_hamburger_job == 0) pthread_cond_wait(&customer_hamburger_c, &customer);
-		have_fries = 0;
-		have_soda = 0;
-		customer_hamburger_job = 0;
-		chef_job = 1;
-		puts("Hamburger customer takes fries and soda then eats");
-		pthread_mutex_unlock(&customer);
-		puts("Hamburger customer rings bell");
-	}
-	return 0;
-}
 int main(int argc, char *argv[]) {
 	pthread_t chef_t, customer_soda_t, customer_fries_t, customer_hamburger_t, pusher_soda_t, pusher_fries_t, pusher_hamburger_t;
 
