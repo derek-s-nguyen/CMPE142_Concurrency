@@ -3,6 +3,7 @@
 #include <pthread.h>
 #include <time.h>
 #include <unistd.h>
+#include <stdbool.h>
 
 pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t customer = PTHREAD_MUTEX_INITIALIZER;
@@ -18,9 +19,9 @@ pthread_cond_t hamburger = PTHREAD_COND_INITIALIZER;
 pthread_cond_t fries = PTHREAD_COND_INITIALIZER;
 pthread_cond_t soda = PTHREAD_COND_INITIALIZER;
 
-int have_hamburger = 0;
-int have_fries = 0;
-int have_soda = 0;
+bool have_hamburger = false;
+bool have_fries = false;
+bool have_soda = false;
 
 int chef_job = 1;
 int customer_hamburger_job = 0;
@@ -50,7 +51,7 @@ void *chef(void *arg) {
 		if (counter == 101) {
 			printf("TOTAL:\n");
 			printf("Hamburger customer count:%d\n", hamburgerCounter);
-			printf("Paper customer count:%d\n", friesCounter);
+			printf("Fries customer count:%d\n", friesCounter);
 			printf("Soda customer count:%d\n", sodaCounter);
 			exit(0);
 
@@ -62,8 +63,8 @@ void *chef(void *arg) {
 		if (randNum == 0) {
 
 			chef_job = 0;
-			have_hamburger = 1;
-			have_fries = 1;
+			have_hamburger = true;
+			have_fries = true;
 			sodaCounter++;
 			puts("Chef puts fries and hamburger");
 			pthread_cond_signal(&fries);
@@ -74,8 +75,8 @@ void *chef(void *arg) {
 		//if soda and burgers
 		else if (randNum == 1) {
 			chef_job = 0;
-			have_hamburger = 1;
-			have_soda = 1;
+			have_hamburger = true;
+			have_soda = true;
 			friesCounter++;
 			puts("Chef puts soda and hamburger");
 			pthread_cond_signal(&fries);
@@ -85,10 +86,10 @@ void *chef(void *arg) {
 		//if soda and fries
 		else if (randNum == 2) {
 			chef_job = 0;
-			have_soda = 1;
-			have_fries = 1;
+			have_soda = true;
+			have_fries = true;
 			hamburgerCounter++;
-			puts("Put fries and soda");
+			puts("Chef puts fries and soda");
 			pthread_cond_signal(&fries);
 			pthread_cond_signal(&soda);
 		}
@@ -101,16 +102,16 @@ void *chef(void *arg) {
 void *pusher_fries(void *arg){
 	while (1) {
 		pthread_mutex_lock(&m);
-		while (have_fries == 0) pthread_cond_wait(&fries, &m);
-		if (have_hamburger == 1) {
-			have_hamburger = 0;
+		while (!have_fries) pthread_cond_wait(&fries, &m);
+		if (have_hamburger) {
+			have_hamburger = false;
 			chef_job = 0;
 			customer_soda_job = 1;
 			puts("Call the soda customer");
 			pthread_cond_signal(&customer_soda_c);
 		}
-		if (have_soda == 1) {
-			have_soda = 0;
+		if (have_soda) {
+			have_soda = false;
 			chef_job = 0;
 			customer_hamburger_job = 1;
 			puts("Call the hamburger customer");
@@ -124,18 +125,18 @@ void *pusher_hamburger(void *arg) {
 
 	while (1) {
 		pthread_mutex_lock(&m);
-		while (have_hamburger == 0)
+		while (!have_hamburger)
 			pthread_cond_wait(&hamburger, &m);
 
-		if (have_fries == 1) {
-			have_fries = 0;
+		if (have_fries) {
+			have_fries = false;
 			chef_job = 0;
 			customer_soda_job = 1;
 			puts("Call the soda customer");
 			pthread_cond_signal(&customer_soda_c);
 		}
-		if (have_soda == 1) {
-			have_soda = 0;
+		if (have_soda) {
+			have_soda = false;
 			chef_job = 0;
 			customer_fries_job = 1;
 			puts("Call the fries customer");
@@ -150,17 +151,17 @@ void *pusher_hamburger(void *arg) {
 void *pusher_soda(void * arg){
     while(1){
         pthread_mutex_lock(&m);
-        while(have_soda == 0) pthread_cond_wait(&soda, &m);
+        while(!have_soda) pthread_cond_wait(&soda, &m);
 
-        if(have_hamburger == 1){
-            have_hamburger = 0;
+        if(have_hamburger){
+            have_hamburger = false;
             chef_job = 0;
             customer_fries_job = 1;
             puts("Call the fries customer");
             pthread_cond_signal(&customer_fries_c);
         }
-        if(have_fries == 1){
-            have_soda = 0;
+        if(have_fries){
+            have_fries = false;
             chef_job = 0;
             customer_hamburger_job = 1;
             puts("Call the hamburger customer");
@@ -178,8 +179,8 @@ void * customer_soda(void * arg){
         pthread_mutex_lock(&customer);
         while(customer_soda_job == 0)
             pthread_cond_wait(&customer_soda_c, &customer);
-        have_fries = 0;
-        have_hamburger = 0;
+        have_fries = false;
+        have_hamburger = false;
         customer_soda_job = 0;
         chef_job = 1;
         puts("Soda customer takes fries and hamburger then eats");
@@ -197,8 +198,8 @@ void *customer_hamburger(void *arg) {
 		pthread_mutex_lock(&customer);
 		while (customer_hamburger_job == 0)
 			pthread_cond_wait(&customer_hamburger_c, &customer);
-		have_fries = 0;
-		have_soda = 0;
+		have_fries = false;
+		have_soda = false;
 		customer_hamburger_job = 0;
 		chef_job = 1;
 		puts("Hamburger customer takes fries and soda then eats");
@@ -214,8 +215,8 @@ void * customer_fries(void * arg) {
 	while (1) {
 		pthread_mutex_lock(&customer);
 		while (customer_fries_job == 0) pthread_cond_wait(&customer_fries_c, &customer);
-		have_soda = 0;
-		have_hamburger = 0;
+		have_soda = false;
+		have_hamburger = false;
 		customer_fries_job = 0;
 		chef_job = 1;
 		puts("Fries customer takes hamburger and soda then eats");
