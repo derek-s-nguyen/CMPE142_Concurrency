@@ -2,7 +2,7 @@
 #include<stdlib.h>
 #include<sys/types.h>
 #include<semaphore.h>
-#include<pthread.h>--
+#include<pthread.h>
 int table_used = 1, cooked_items[2], generated = 0;
 int customer_count[3];
 char *food_items[]={"cooked a Hamburger","made some Fries","poured a Soda"};
