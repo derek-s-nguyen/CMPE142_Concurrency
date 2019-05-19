@@ -1,70 +1,155 @@
-#include<stdio.h>
-#include<stdlib.h>
-#include<sys/types.h>
-#include<semaphore.h>
-#include<pthread.h>
-int table_used = 1, cooked_items[2], generated = 0;
-int customer_count[3];
-char *food_items[]={"cooked a Hamburger","made some Fries","poured a Soda"};
-sem_t table;
-void *chef_boi(void *arg){
-    int food_item_1, food_item_2;
-    int make_100_meals = 0;
-    while(1)
-    {
-	sleep(1);
-	srand((unsigned)time(0));
-        sem_wait(&table);
-        if(make_100_meals == 100){
-	    printf("\nTOTALS:\n");
-	    printf("_______________________ \n");
-            printf("Customer 1 ate %i meals \n", customer_count[0]);
-            printf("Customer 2 ate %i meals \n", customer_count[1]);
-            printf("Customer 3 ate %i meals \n", customer_count[2]);
-            exit(0); 
-        } 
-        if(table_used == 1){
-            do{
-	        food_item_1 = rand() % 3;
-		food_item_2 = rand() % 3;
-	    }while(food_item_1 == food_item_2);
-            cooked_items[0] = food_item_1;
-            cooked_items[1] = food_item_2;
-            printf("Chef has %s and %s", food_items[food_item_1], food_items[food_item_2]);
-            generated = 1;
-            table_used = 0;
-            make_100_meals = make_100_meals + 1;
+#include <stdio.h>
+#include <stdlib.h>
+#include <pthread.h>
+#include <time.h>
+#include <unistd.h>
+
+pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t customer = PTHREAD_MUTEX_INITIALIZER;
+
+//chef and customers
+pthread_cond_t chef_c = PTHREAD_COND_INITIALIZER;
+pthread_cond_t customer_hamburger_c = PTHREAD_COND_INITIALIZER;
+pthread_cond_t customer_fries_c = PTHREAD_COND_INITIALIZER;
+pthread_cond_t customer_soda_c = PTHREAD_COND_INITIALIZER;
+
+//conditionals
+pthread_cond_t hamburger = PTHREAD_COND_INITIALIZER;
+pthread_cond_t fries = PTHREAD_COND_INITIALIZER;
+pthread_cond_t soda = PTHREAD_COND_INITIALIZER;
+
+int have_hamburger = 0;
+int have_fries = 0;
+int have_soda = 0;
+
+int chef_job = 1;
+int customer_hamburger_job = 0;
+int customer_fries_job = 0;
+int customer_soda_job = 0;
+
+int counter  = 0;
+int hamburgerCounter = 0, friesCounter = 0, sodaCounter = 0;
+
+void *chef(void *arg){
+    
+    while(1) {
+        
+        sleep(1);
+        
+        pthread_mutex_lock(&m);
+        
+        //The chef stays waiting if chef_job is equal 0
+        while(chef_job == 0)
+            pthread_cond_wait(&chef_c, &m);
+        
+        
+        printf("------------------------------------------------------------\n");
+        
+	counter++; 
+
+        if(counter < 101) printf("Counter:%d \n", counter);
+
+	if(counter == 101){
+		printf("TOTAL:\n");
+		printf("Hamburger customer count:%d\n", hamburgerCounter);
+		printf("Paper customer count:%d\n", friesCounter);
+		printf("Soda customer count:%d\n", sodaCounter);
+		exit(0);
+
+	}
+
+        int randNum = rand() % 3;
+        
+	//fries and hamburgers
+        if ( randNum == 0 ) {
+           
+            chef_job = 0;
+            have_hamburger = 1;
+            have_fries = 1;
+	    sodaCounter++;
+            puts("Chef puts fries and hamburger");
+            pthread_cond_signal(&fries);
+            pthread_cond_signal(&hamburger);
+
         }
-        sem_post(&table);
+      
+	//if soda and burgers
+        else if ( randNum == 1 ) {
+            chef_job = 0;
+            have_hamburger = 1;
+            have_soda = 1;
+	    friesCounter++;
+            puts("Chef puts soda and hamburger");
+            pthread_cond_signal(&fries);
+            pthread_cond_signal(&hamburger);
+        }
+
+	//if soda and fries
+        else if ( randNum == 2 ) {
+            chef_job = 0;
+            have_soda = 1;
+            have_fries = 1;
+	    hamburgerCounter++;
+            puts("Put fries and soda");
+            pthread_cond_signal(&fries);
+            pthread_cond_signal(&soda);
+        }
+        
+        pthread_mutex_unlock(&m);
     }
+    return 0;
 }
-void *customer_boi(void *i){
+
+void *pusher_hamburger(void *arg){
+    
+    while(1) {
+        pthread_mutex_lock(&m);
+        while(have_hamburger == 0)
+            pthread_cond_wait(&hamburger, &m);
+    
+        if(have_fries == 1) {
+            have_fries = 0;
+            chef_job = 0;
+            customer_soda_job = 1;
+            puts("Call the soda customer");
+            pthread_cond_signal(&customer_soda_c);
+        }
+        if(have_soda == 1) {
+            have_soda = 0;
+            chef_job = 0;
+            customer_fries_job = 1;
+            puts("Call the fries customer");
+            pthread_cond_signal(&customer_fries_c);
+        }
+        pthread_mutex_unlock(&m);
+    }
+    
+    return 0 ;
+}
+
+void *customer_hamburger(void *arg){
+    
     while(1){
-	sleep(1);
-        sem_wait(&table);
-        if(table_used == 0){
-            if(generated && cooked_items[0] != i && cooked_items[1] != i){
-                printf(", so customer %d has eaten \n",(int)i+1);
-                printf("\n");
-                customer_count[(int)i]++;
-                table_used = 1;
-                generated = 0;
-            }
-        }
-    sem_post(&table);
+        
+        pthread_mutex_lock(&customer);
+        while(customer_hamburger_job == 0)
+            pthread_cond_wait(&customer_hamburger_c, &customer);
+        have_fries = 0;
+        have_soda = 0;
+        customer_hamburger_job = 0;
+        chef_job = 1;
+        puts("Hamburger customer takes fries and soda then eats");
+        pthread_mutex_unlock(&customer);
+        
+        puts("Hamburger customer rings bell");
     }
+    
+    return 0;
 }
 
-int main(){
-    pthread_t customer_1, customer_2, customer_3, chef;
-    sem_init(&table, 0, 1);
-    printf("Customer 1 has a Hamburger\n");
-    printf("Customer 2 has Fries\n");
-    printf("Customer 3 has a Soda\n");
-    pthread_create(&chef, 0, chef_boi, 0);
-    pthread_create(&customer_1, 0, customer_boi, (void*)0);
-    pthread_create(&customer_2, 0, customer_boi, (void*)1);
-    pthread_create(&customer_3, 0, customer_boi, (void*)2);
-    while(1);
-}
+int main(int argc, char *argv[]){
 
+
+
+return 0;
+}
