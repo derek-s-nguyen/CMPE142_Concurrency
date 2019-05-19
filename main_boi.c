@@ -27,129 +27,251 @@ int customer_hamburger_job = 0;
 int customer_fries_job = 0;
 int customer_soda_job = 0;
 
-int counter  = 0;
+int counter = 0;
 int hamburgerCounter = 0, friesCounter = 0, sodaCounter = 0;
 
-void *chef(void *arg){
-    
-    while(1) {
-        
-        sleep(1);
-        
-        pthread_mutex_lock(&m);
-        
-        //The chef stays waiting if chef_job is equal 0
-        while(chef_job == 0)
-            pthread_cond_wait(&chef_c, &m);
-        
-        
-        printf("------------------------------------------------------------\n");
-        
-	counter++; 
+void *chef(void *arg) {
 
-        if(counter < 101) printf("Counter:%d \n", counter);
+	while (1) {
 
-	if(counter == 101){
-		printf("TOTAL:\n");
-		printf("Hamburger customer count:%d\n", hamburgerCounter);
-		printf("Paper customer count:%d\n", friesCounter);
-		printf("Soda customer count:%d\n", sodaCounter);
-		exit(0);
+		sleep(1);
 
+		pthread_mutex_lock(&m);
+
+		//The chef stays waiting if chef_job is equal 0
+		while (chef_job == 0) pthread_cond_wait(&chef_c, &m);
+
+		printf("------------------------------------------------------------\n");
+
+		counter++;
+
+		if (counter < 101) printf("Counter:%d \n", counter);
+
+		if (counter == 101) {
+			printf("TOTAL:\n");
+			printf("Hamburger customer count:%d\n", hamburgerCounter);
+			printf("Paper customer count:%d\n", friesCounter);
+			printf("Soda customer count:%d\n", sodaCounter);
+			exit(0);
+
+		}
+
+		int randNum = rand() % 3;
+
+		//fries and hamburgers
+		if (randNum == 0) {
+
+			chef_job = 0;
+			have_hamburger = 1;
+			have_fries = 1;
+			sodaCounter++;
+			puts("Chef puts fries and hamburger");
+			pthread_cond_signal(&fries);
+			pthread_cond_signal(&hamburger);
+
+		}
+
+		//if soda and burgers
+		else if (randNum == 1) {
+			chef_job = 0;
+			have_hamburger = 1;
+			have_soda = 1;
+			friesCounter++;
+			puts("Chef puts soda and hamburger");
+			pthread_cond_signal(&fries);
+			pthread_cond_signal(&hamburger);
+		}
+
+		//if soda and fries
+		else if (randNum == 2) {
+			chef_job = 0;
+			have_soda = 1;
+			have_fries = 1;
+			hamburgerCounter++;
+			puts("Put fries and soda");
+			pthread_cond_signal(&fries);
+			pthread_cond_signal(&soda);
+		}
+
+		pthread_mutex_unlock(&m);
 	}
-
-        int randNum = rand() % 3;
-        
-	//fries and hamburgers
-        if ( randNum == 0 ) {
-           
-            chef_job = 0;
-            have_hamburger = 1;
-            have_fries = 1;
-	    sodaCounter++;
-            puts("Chef puts fries and hamburger");
-            pthread_cond_signal(&fries);
-            pthread_cond_signal(&hamburger);
-
-        }
-      
-	//if soda and burgers
-        else if ( randNum == 1 ) {
-            chef_job = 0;
-            have_hamburger = 1;
-            have_soda = 1;
-	    friesCounter++;
-            puts("Chef puts soda and hamburger");
-            pthread_cond_signal(&fries);
-            pthread_cond_signal(&hamburger);
-        }
-
-	//if soda and fries
-        else if ( randNum == 2 ) {
-            chef_job = 0;
-            have_soda = 1;
-            have_fries = 1;
-	    hamburgerCounter++;
-            puts("Put fries and soda");
-            pthread_cond_signal(&fries);
-            pthread_cond_signal(&soda);
-        }
-        
-        pthread_mutex_unlock(&m);
-    }
-    return 0;
+	return 0;
 }
 
-void *pusher_hamburger(void *arg){
-    
-    while(1) {
+void *pusher_fries(void *arg){
+	while (1) {
+		pthread_mutex_lock(&m);
+		while (have_fries == 0) pthread_cond_wait(&fries, &m);
+		if (have_hamburger == 1) {
+			have_hamburger = 0;
+			chef_job = 0;
+			customer_soda_job = 1;
+			puts("Call the soda customer");
+			pthread_cond_signal(&customer_soda_c);
+		}
+		if (have_soda == 1) {
+			have_soda = 0;
+			chef_job = 0;
+			customer_hamburger_job = 1;
+			puts("Call the hamburger customer");
+			pthread_cond_signal(&customer_hamburger_c);
+		}
+		pthread_mutex_unlock(&m);
+	}
+	return 0;
+}
+void *pusher_hamburger(void *arg) {
+
+	while (1) {
+		pthread_mutex_lock(&m);
+		while (have_hamburger == 0)
+			pthread_cond_wait(&hamburger, &m);
+
+		if (have_fries == 1) {
+			have_fries = 0;
+			chef_job = 0;
+			customer_soda_job = 1;
+			puts("Call the soda customer");
+			pthread_cond_signal(&customer_soda_c);
+		}
+		if (have_soda == 1) {
+			have_soda = 0;
+			chef_job = 0;
+			customer_fries_job = 1;
+			puts("Call the fries customer");
+			pthread_cond_signal(&customer_fries_c);
+		}
+		pthread_mutex_unlock(&m);
+	}
+
+	return 0;
+}
+
+void *pusher_soda(void * arg){
+    while(1){
         pthread_mutex_lock(&m);
-        while(have_hamburger == 0)
-            pthread_cond_wait(&hamburger, &m);
-    
-        if(have_fries == 1) {
-            have_fries = 0;
-            chef_job = 0;
-            customer_soda_job = 1;
-            puts("Call the soda customer");
-            pthread_cond_signal(&customer_soda_c);
-        }
-        if(have_soda == 1) {
-            have_soda = 0;
+        while(have_soda == 0) pthread_cond_wait(&soda, &m);
+
+        if(have_hamburger == 1){
+            have_hamburger = 0;
             chef_job = 0;
             customer_fries_job = 1;
             puts("Call the fries customer");
             pthread_cond_signal(&customer_fries_c);
         }
+        if(have_fries == 1){
+            have_soda = 0;
+            chef_job = 0;
+            customer_hamburger_job = 1;
+            puts("Call the hamburger customer");
+            pthread_cond_signal(&customer_hamburger_c);
+        }
         pthread_mutex_unlock(&m);
     }
-    
     return 0 ;
 }
 
-void *customer_hamburger(void *arg){
-    
-    while(1){
-        
-        pthread_mutex_lock(&customer);
-        while(customer_hamburger_job == 0)
-            pthread_cond_wait(&customer_hamburger_c, &customer);
-        have_fries = 0;
-        have_soda = 0;
-        customer_hamburger_job = 0;
-        chef_job = 1;
-        puts("Hamburger customer takes fries and soda then eats");
-        pthread_mutex_unlock(&customer);
-        
-        puts("Hamburger customer rings bell");
-    }
-    
-    return 0;
+void *customer_hamburger(void *arg) {
+
+	while (1) {
+
+		pthread_mutex_lock(&customer);
+		while (customer_hamburger_job == 0)
+			pthread_cond_wait(&customer_hamburger_c, &customer);
+		have_fries = 0;
+		have_soda = 0;
+		customer_hamburger_job = 0;
+		chef_job = 1;
+		puts("Hamburger customer takes fries and soda then eats");
+		pthread_mutex_unlock(&customer);
+
+		puts("Hamburger customer rings bell");
+	}
+
+	return 0;
+}
+void * customer_fries(void * arg) {
+
+	while (1) {
+		pthread_mutex_lock(&customer);
+		while (customer_fries_job == 0) pthread_cond_wait(&customer_fries_c, &customer);
+		have_soda = 0;
+		have_hamburger = 0;
+		customer_fries_job = 0;
+		chef_job = 1;
+		puts("Fries customer takes hamburger and soda then eats");
+		pthread_mutex_unlock(&customer);
+
+		puts("Fries customer rings bell");
+	}
+	return 0;
 }
 
-int main(int argc, char *argv[]){
+void * customer_hamburger(void * arg) {
 
+	while (1) {
+		pthread_mutex_lock(&customer);
+		while (customer_hamburger_job == 0) pthread_cond_wait(&customer_hamburger_c, &customer);
+		have_fries = 0;
+		have_soda = 0;
+		customer_hamburger_job = 0;
+		chef_job = 1;
+		puts("Hamburger customer takes fries and soda then eats");
+		pthread_mutex_unlock(&customer);
+		puts("Hamburger customer rings bell");
+	}
+	return 0;
+}
+int main(int argc, char *argv[]) {
+	pthread_t chef_t, customer_soda_t, customer_fries_t, customer_hamburger_t, pusher_soda_t, pusher_fries_t, pusher_hamburger_t;
 
+	//random seed
+	time_t t;
 
-return 0;
+	srand((unsigned) time(&t));
+
+	if (pthread_create(&chef_t, NULL, chef, NULL) != 0) {
+		fprintf(stderr, "Impossible to create thread\n");
+		exit(1);
+	}
+
+	if (pthread_create(&pusher_soda_t, NULL, pusher_soda, NULL) != 0) {
+		fprintf(stderr, "Thread cannot be created\n");
+		exit(1);
+	}
+
+	if (pthread_create(&pusher_fries_t, NULL, pusher_fries, NULL) != 0) {
+		fprintf(stderr, "Thread cannot be created\n");
+		exit(1);
+	}
+
+	if (pthread_create(&pusher_hamburger_t, NULL, pusher_hamburger, NULL)
+			!= 0) {
+		fprintf(stderr, "Thread cannot be created\n");
+		exit(1);
+	}
+
+	if (pthread_create(&customer_soda_t, NULL, customer_soda, NULL) != 0) {
+		fprintf(stderr, "Thread cannot be created\n");
+		exit(1);
+	}
+
+	if (pthread_create(&customer_fries_t, NULL, customer_fries, NULL) != 0) {
+		fprintf(stderr, "Thread cannot be created\n");
+		exit(1);
+	}
+
+	if (pthread_create(&customer_hamburger_t, NULL, customer_hamburger, NULL)
+			!= 0) {
+		fprintf(stderr, "Thread cannot be created\n");
+		exit(1);
+	}
+
+	pthread_join(chef_t, NULL);
+	pthread_join(pusher_soda_t, NULL);
+	pthread_join(pusher_fries_t, NULL);
+	pthread_join(pusher_hamburger_t, NULL);
+	pthread_join(customer_soda_t, NULL);
+	pthread_join(customer_fries_t, NULL);
+	pthread_join(customer_hamburger_t, NULL);
 }
