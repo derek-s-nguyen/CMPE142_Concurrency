@@ -42,17 +42,17 @@ void *chef(void *arg) {
 		//The chef stays waiting if chef_job is equal 0
 		while (chef_job == 0) pthread_cond_wait(&chef_c, &m);
 
-		printf("------------------------------------------------------------\n");
+		printf("------------------------------------------------------------\n \n");
 
 		counter++;
 
-		if (counter < 101) printf("Counter:%d \n", counter);
+		if (counter < 101) printf("Counter: %d \n", counter);
 
 		if (counter == 101) {
 			printf("TOTAL:\n");
-			printf("Hamburger customer count:%d\n", hamburgerCounter);
-			printf("Fries customer count:%d\n", friesCounter);
-			printf("Soda customer count:%d\n", sodaCounter);
+			printf("Hamburger customer count: %d\n", hamburgerCounter);
+			printf("Fries customer count: %d\n", friesCounter);
+			printf("Soda customer count: %d\n", sodaCounter);
 			exit(0);
 
 		}
