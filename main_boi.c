@@ -47,7 +47,8 @@ void *chef(void *arg) {
 		counter++;
 
 		if (counter < 101) printf("Counter: %d \n", counter);
-
+		
+		//output at the end of the code
 		if (counter == 101) {
 			printf("TOTAL:\n");
 			printf("Hamburger customer count: %d\n", hamburgerCounter);
@@ -56,7 +57,7 @@ void *chef(void *arg) {
 			exit(0);
 
 		}
-
+		//randomized number generator
 		int randNum = rand() % 3;
 
 		//fries and hamburgers
@@ -98,6 +99,8 @@ void *chef(void *arg) {
 	}
 	return 0;
 }
+
+//all pusher functions are here
 
 void *pusher_fries(void *arg){
 	while (1) {
@@ -171,6 +174,8 @@ void *pusher_soda(void * arg){
     }
     return 0 ;
 }
+
+//all the functions that deal with the threee customers
 
 void * customer_soda(void * arg){
     
