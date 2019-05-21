@@ -102,48 +102,48 @@ void *chef(void *arg) {
 
 //all pusher functions are here
 
-void *pusher_fries(void *arg){
+void *pusher_fries(void *arg){//fries pusher 
 	while (1) {
 		pthread_mutex_lock(&m);
-		while (!have_fries) pthread_cond_wait(&fries, &m);
-		if (have_hamburger) {
+		while (!have_fries) pthread_cond_wait(&fries, &m);//if no fries, sleep
+		if (have_hamburger) {//if finds hamburger on table too
 			have_hamburger = false;
 			chef_job = 0;
 			customer_soda_job = 1;
 			puts("Call the soda customer");
-			pthread_cond_signal(&customer_soda_c);
+			pthread_cond_signal(&customer_soda_c);//signal customer soda
 		}
-		if (have_soda) {
+		if (have_soda) {//if finds soda on table too
 			have_soda = false;
 			chef_job = 0;
 			customer_hamburger_job = 1;
 			puts("Call the hamburger customer");
-			pthread_cond_signal(&customer_hamburger_c);
+			pthread_cond_signal(&customer_hamburger_c);//signal customer hamburger
 		}
 		pthread_mutex_unlock(&m);
 	}
 	return 0;
 }
-void *pusher_hamburger(void *arg) {
+void *pusher_hamburger(void *arg) {//hamburger pusher
 
 	while (1) {
 		pthread_mutex_lock(&m);
 		while (!have_hamburger)
-			pthread_cond_wait(&hamburger, &m);
+			pthread_cond_wait(&hamburger, &m);//if no hamburger, sleep
 
-		if (have_fries) {
+		if (have_fries) {//if fries on table too
 			have_fries = false;
 			chef_job = 0;
 			customer_soda_job = 1;
 			puts("Call the soda customer");
-			pthread_cond_signal(&customer_soda_c);
+			pthread_cond_signal(&customer_soda_c);//signal soda customer
 		}
-		if (have_soda) {
+		if (have_soda) {//if soda on table too 
 			have_soda = false;
 			chef_job = 0;
 			customer_fries_job = 1;
 			puts("Call the fries customer");
-			pthread_cond_signal(&customer_fries_c);
+			pthread_cond_signal(&customer_fries_c);//signal fries customer
 		}
 		pthread_mutex_unlock(&m);
 	}
@@ -151,24 +151,24 @@ void *pusher_hamburger(void *arg) {
 	return 0;
 }
 
-void *pusher_soda(void * arg){
+void *pusher_soda(void * arg){//soda pusher
     while(1){
         pthread_mutex_lock(&m);
-        while(!have_soda) pthread_cond_wait(&soda, &m);
+        while(!have_soda) pthread_cond_wait(&soda, &m);//if no soda, sleep
 
-        if(have_hamburger){
+        if(have_hamburger){//if hamburger in table too
             have_hamburger = false;
             chef_job = 0;
             customer_fries_job = 1;
             puts("Call the fries customer");
-            pthread_cond_signal(&customer_fries_c);
+            pthread_cond_signal(&customer_fries_c);//signal fries customer
         }
-        if(have_fries){
+        if(have_fries){//if fries in table too
             have_fries = false;
             chef_job = 0;
             customer_hamburger_job = 1;
             puts("Call the hamburger customer");
-            pthread_cond_signal(&customer_hamburger_c);
+            pthread_cond_signal(&customer_hamburger_c);//signal hamburger
         }
         pthread_mutex_unlock(&m);
     }
