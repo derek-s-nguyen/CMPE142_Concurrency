@@ -79,7 +79,7 @@ void *chef(void *arg) {
 			have_soda = true;
 			friesCounter++;
 			puts("Chef puts soda and hamburger");
-			pthread_cond_signal(&fries);
+			pthread_cond_signal(&soda);
 			pthread_cond_signal(&hamburger);
 		}
 
